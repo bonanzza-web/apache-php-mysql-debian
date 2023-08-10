@@ -1,0 +1,3 @@
+---
+# defaults file for deploy_webserver
+php_version: "7.4"

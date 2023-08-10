@@ -1,0 +1,21 @@
+---
+# handlers file for deploy_webserver
+- name: Check php version
+  ansible.builtin.copy:
+    src: ./info.php
+    dest: /var/www/html
+    mode: '0644'
+
+- name: Move files
+  ansible.builtin.shell: mv /var/www/html/wordpress/* /var/www/html/
+  when: www_html_contents.matched == 0
+
+- name: Restart Apache2
+  ansible.builtin.service:
+    name: apache2
+    state: restarted
+
+- name: Remove empty wordpress
+  ansible.builtin.file:
+    path: /var/www/html/wordpress
+    state: absent

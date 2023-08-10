@@ -1,0 +1,8 @@
+---
+- name: Install LAMP
+  hosts: all
+  become: true
+  user: debian
+
+  roles:
+    - deploy_webserver

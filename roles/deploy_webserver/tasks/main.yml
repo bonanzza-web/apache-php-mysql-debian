@@ -1,0 +1,100 @@
+---
+# tasks file for deploy_webserver
+- name: Update apt
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Install MariaDB
+  ansible.builtin.apt:
+    name: mariadb-server
+    state: present
+
+- name: Install gnupg
+  ansible.builtin.apt:
+    name: gnupg
+    state: present
+
+- name: "Repo PHP 7.4"
+  ansible.builtin.apt:
+    pkg:
+      - lsb-release
+      - apt-transport-https
+      - ca-certificates
+
+- name: Add PHP 7.4 repository key
+  ansible.builtin.apt_key:
+    url: https://packages.sury.org/php/apt.gpg
+    state: present
+
+- name: Add PHP 7.4 repository
+  ansible.builtin.apt_repository:
+    repo: "deb https://packages.sury.org/php/ {{ ansible_distribution_release }} main"
+    state: present
+
+- name: Install PHP 7.4
+  ansible.builtin.apt:
+    name: php7.4
+    state: present
+
+- name: Install LAMP stack
+  ansible.builtin.apt:
+    pkg:
+      - php{{ php_version }}-mysql
+      - php{{ php_version }}-curl
+      - php{{ php_version }}-json
+      - php{{ php_version }}-cgi
+      - php{{ php_version }}-xsl
+      - php{{ php_version }}-cgi
+      - php{{ php_version }}-gd
+      - php{{ php_version }}-mbstring
+      - php{{ php_version }}-zip
+      - php{{ php_version }}-xmlrpc
+      - php{{ php_version }}-soap
+      - php{{ php_version }}-intl
+      - libapache2-mod-php
+      - php{{ php_version }}-common
+    state: present
+    update_cache: true
+  notify: Check php version
+
+- name: Download file
+  ansible.builtin.get_url:
+    url: "https://ru.wordpress.org/latest-ru_RU.tar.gz"
+    dest: "/var/www/html/present-ru_RU.tar.gz"
+    mode: '0644'
+  become: true
+
+- name: Extract file
+  ansible.builtin.unarchive:
+    src: "/var/www/html/present-ru_RU.tar.gz"
+    dest: "/var/www/html/"
+    remote_src: true
+  become: true
+  notify: Move files
+
+- name: Remove downloaded file
+  ansible.builtin.file:
+    path: "/var/www/html/present-ru_RU.tar.gz"
+    state: absent
+  become: true
+
+- name: Change owner and group of a directory recursively
+  ansible.builtin.file:
+    path: /var/www/html
+    owner: www-data
+    group: www-data
+    recurse: true
+    state: directory
+  notify: Remove empty wordpress
+
+- name: Remove index.html
+  ansible.builtin.file:
+    path: /var/www/html/index.html
+    state: absent
+  notify: Restart Apache2
+
+- name: Check if /var/www/html/ is empty
+  ansible.builtin.find:
+    paths: /var/www/html/
+    patterns: '*'
+  register: www_html_contents
